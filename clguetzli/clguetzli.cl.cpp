@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <vector>
+#include <cmath>
 #include "utils.h"
 
 #if defined(__USE_OPENCL__) || defined(__USE_CUDA__)
