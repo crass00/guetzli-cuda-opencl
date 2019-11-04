@@ -2,7 +2,7 @@ workspace "guetzli"
   configurations { "Release", "Debug" }
   language "C++"
   flags { "C++11" }
-  includedirs { ".", "third_party/butteraugli", "clguetzli" }
+  includedirs { ".", "third_party/butteraugli", "clguetzli", "/usr/include/CL" }
   libdirs {}
 
   filter "action:vs*"
@@ -23,28 +23,12 @@ workspace "guetzli"
     optimize "Full"
   filter {}
 
-  project "guetzli_static"
-    kind "StaticLib"
-    files
-      {
-        "guetzli/*.cc",
-        "guetzli/*.h",
-        "third_party/butteraugli/butteraugli/butteraugli.cc",
-        "third_party/butteraugli/butteraugli/butteraugli.h",
-        "clguetzli/*.cpp",
-        "clguetzli/*.h"
-      }
-    removefiles "guetzli/guetzli.cc"
-    filter "action:gmake"
-      linkoptions { "`pkg-config --static --libs libpng || libpng-config --static --ldflags`" }
-      buildoptions { "`pkg-config --static --cflags libpng || libpng-config --static --cflags`" }
-
   project "guetzli"
     kind "ConsoleApp"
     filter "action:gmake"
 	  --defines { "__USE_OPENCL__", "__USE_CUDA__", "__SUPPORT_FULL_JPEG__" }
-      linkoptions { "`pkg-config --libs libpng || libpng-config --ldflags`" }
-      buildoptions { "`pkg-config --cflags libpng || libpng-config --cflags`" }
+      linkoptions { "`-fsigned-char pkg-config --libs libpng || libpng-config --ldflags`" }
+      buildoptions { "-fsigned-char `pkg-config --cflags libpng || libpng-config --cflags`" }
       --links { "OpenCL", "cuda", "profiler", "unwind", "jpeg" }
     filter "action:vs*"
       links { "shlwapi" }
