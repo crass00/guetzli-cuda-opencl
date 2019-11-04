@@ -35,6 +35,9 @@
 
 namespace {
 
+// The current guetzli version
+static const char* const  kVersion = "1.0.2";	
+
 constexpr int kDefaultJPEGQuality = 95;
 
 // An upper estimate of memory usage of Guetzli. The bound is
@@ -224,23 +227,38 @@ void Usage() {
       "guetzli [flags] input_filename output_filename\n"
       "\n"
       "Flags:\n"
-      "  --verbose    - Print a verbose trace of all attempts to standard output.\n"
-      "  --quality Q  - Visual quality to aim for, expressed as a JPEG quality value.\n"
-      "                 Default value is %d.\n"
-      "  --memlimit M - Memory limit in MB. Guetzli will fail if unable to stay under\n"
-      "                 the limit. Default limit is %d MB.\n"
+      "  --version     - Print version.\n"
+      "  --verbose     - Print a verbose trace of all attempts to standard output.\n"
+      "  --quality Q     Visual quality to aim for, expressed as a JPEG quality value.\n"
+      "                  Default value is %d.\n"
+      "  --memlimit M  - Memory limit in MB. Guetzli will fail if unable to stay under\n"
+      "                  the limit. Default limit is %d MB.\n"
+      "  --verbose     - Print a verbose trace of all attempts to standard output.\n"
+      "  --quality Q   - Visual quality to aim for, expressed as a JPEG quality value.\n"
+      "                  Default value is %d.\n"
+      "  --memlimit M  - Memory limit in MB. Guetzli will fail if unable to stay under\n"
+      "                  the limit. Default limit is %d MB.\n"
+      "  --keep-exif   - Preserve exif data.\n"
+      "  --overwrite   - Overwrite the existing files.\n"
+
 #ifdef __USE_OPENCL__
-	  "  --opencl     - Use OpenCL\n"
-      "  --checkcl    - Check OpenCL result\n"
+      "  --opencl      - Use OpenCL\n"
+      "    --checkcl     - Check OpenCL result\n"
 #endif
-	  "  --c          - Use c opt version\n"
+	  "  --c           - Use c opt version\n"
 #ifdef __USE_CUDA__
-	  "  --cuda       - Use CUDA\n"	 
-      "  --checkcuda  - Check CUDA result\n"
+      "  --cuda        - Use CUDA\n"	 
+      "    --checkcuda   - Check CUDA result\n"
 #endif
-      "  --nomemlimit - Do not limit memory usage.\n", kDefaultJPEGQuality, kDefaultMemlimitMB);
+      "  --nomemlimit  - Do not limit memory usage.\n", kDefaultJPEGQuality, kDefaultMemlimitMB);
   exit(1);
 }
+
+void Version() {
+  fprintf(stdout,
+      "Guetzli %s\n", kVersion);
+  exit(0);
+}	
 
 }  // namespace
 
@@ -250,6 +268,8 @@ int main(int argc, char** argv) {
 #endif
   std::set_terminate(TerminateHandler);
 
+  guetzli::Params params;	
+
   int verbose = 0;
   int quality = kDefaultJPEGQuality;
   int memlimit_mb = kDefaultMemlimitMB;
@@ -258,7 +278,9 @@ int main(int argc, char** argv) {
   for(;opt_idx < argc;opt_idx++) {
     if (strnlen(argv[opt_idx], 2) < 2 || argv[opt_idx][0] != '-' || argv[opt_idx][1] != '-')
       break;
-    if (!strcmp(argv[opt_idx], "--verbose")) {
+    if (!strcmp(argv[opt_idx], "--version")) {
+      Version();
+    } else if (!strcmp(argv[opt_idx], "--verbose")) {
       verbose = 1;
     } else if (!strcmp(argv[opt_idx], "--quality")) {
       opt_idx++;
@@ -270,6 +292,10 @@ int main(int argc, char** argv) {
       if (opt_idx >= argc)
         Usage();
       memlimit_mb = atoi(argv[opt_idx]);
+    } else if (!strcmp(argv[opt_idx], "--keep-exif")) {
+      params.clear_metadata = false;
+    } else if (!strcmp(argv[opt_idx], "--overwrite")) {
+      overwrite = 1;  
     } else if (!strcmp(argv[opt_idx], "--nomemlimit")) {
       memlimit_mb = -1;
 	}
@@ -302,14 +328,14 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (argc - opt_idx != 2) {
+  if (argc - opt_idx != 2 && !overwrite) {
     Usage();
   }
 
   std::string in_data = ReadFileOrDie(argv[opt_idx]);
   std::string out_data;
 
-  guetzli::Params params;
+
   params.butteraugli_target = static_cast<float>(
       guetzli::ButteraugliScoreForQuality(quality));
 
@@ -317,6 +343,12 @@ int main(int argc, char** argv) {
 
   if (verbose) {
     stats.debug_output_file = stderr;
+  }
+
+  char* out_file = argv[opt_idx + 1];
+
+  if (overwrite) {
+    out_file = argv[opt_idx];
   }
 
   static const unsigned char kPNGMagicBytes[] = {
@@ -360,7 +392,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  WriteFileOrDie(argv[opt_idx + 1], out_data);
+  WriteFileOrDie(out_file, out_data);
 #ifdef __USE_GPERFTOOLS__
   ProfilerStop();
 #endif
